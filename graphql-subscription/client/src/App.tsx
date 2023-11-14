@@ -1,8 +1,5 @@
 import React, { useMemo, useState } from 'react';
-
-// import { gql } from './gql/gql'
 import { gql, useMutation, useSubscription } from '@apollo/client';
-// import { useMutation } from '@apollo/client';
 
 const MESSAGE = gql(/* GraphQL */ `
   mutation SendMessage($message: String, $time: String, $clientId: String, $roomId: String) {
@@ -24,48 +21,61 @@ const SUBSCRIBE = gql(/* GraphQL */ `
   }
 `)
 
+interface IMessage {
+  message: string;
+  time: string;
+  clientId: string
+}
+
 const YourComponent = () => {
 
+  // Initialize state for the target room
   const [targetRoom, setTargetRoom] = useState<string|null>(null);
 
+  // Generate a unique ID using Math.random() and store it in myId
   const myId = useMemo(() => {
     return Math.random().toString(36).slice(-5).toUpperCase()
   }, [])
   
-  const [messages, setMessages] = useState<[{
-    message: string;
-    time: string;
-    clientId: string
-  }] | []>([]);
+  // Initialize state for the messages
+  const [messages, setMessages] = useState<IMessage[] | []>([]);
   
+  // Initialize state for the message input
   const [message, setMessage] = useState('');
 
+  // Function to create a new room
   const createRoom = () => {
+    // Generate a random room ID and set it as the target room
     setTargetRoom(Math.random().toString(36).slice(-5).toUpperCase())
     // Implement the createRoom logic
   };
 
+  // Function to join an existing room
   const joinRoom = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    // Set the target room to the input value
     setTargetRoom(e.currentTarget.roomId.value)
     // Implement the joinRoom logic
   };
 
-  const { data: dasdata } = useSubscription(SUBSCRIBE,
+  // Use a subscription to listen for new messages in the target room
+  useSubscription(SUBSCRIBE,
     { 
       variables: { roomId: targetRoom },
       onData: ({data}) =>  {
+        // Add the new message to the messages array
         setMessages([...messages, data.data.message])     
       }
     }
   );
 
-
-  // const [sendingMessage, { data, loading, error }] = useMutation(MESSAGE)
-  const [sendingMessage, { data, loading, error }] = useMutation(MESSAGE);
+  // Use a mutation to send a new message
+  const [sendingMessage] = useMutation(MESSAGE);
   
+  // Function to send a message
   const sendMessage = (e: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();
+    // Send the message using the sendingMessage mutation
     sendingMessage({
       variables: {
         time: new Date(),
@@ -74,6 +84,7 @@ const YourComponent = () => {
         roomId: targetRoom
       }
     })
+    // Clear the message input
     setMessage('')
   };
 
